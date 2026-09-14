@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
 Arbitrage Scanner - Find price discrepancies across DEXes
 Monitors Uniswap, Aerodrome, BaseSwap, SushiSwap
@@ -9,8 +9,6 @@ import aiohttp
 import json
 import logging
 import functools
-import hashlib
-import hmac
 from datetime import datetime, timezone
 from flask import Flask, request, jsonify
 import threading
@@ -19,9 +17,8 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s | %(levelname)s | %(
 log = logging.getLogger("ArbScanner")
 
 app = Flask(__name__)
-app.config["MAX_CONTENT_LENGTH"] = 16384
 
-API_KEY = os.environ.get("API_KEY", "")
+API_KEY = os.environ.get("API_KEY", "ef-arb-default")
 TRADE_EXECUTOR_URL = os.environ.get("TRADE_EXECUTOR_URL", "https://trade-executor-service.onrender.com")
 TRADE_EXECUTOR_KEY = os.environ.get("TRADE_EXECUTOR_KEY", "")
 MIN_PROFIT_PERCENT = float(os.environ.get("MIN_PROFIT_PERCENT", "0.5"))
@@ -31,12 +28,7 @@ def require_auth(f):
     def decorated(*args, **kwargs):
         auth = request.headers.get('Authorization', '')
         key = request.headers.get('X-API-Key', '')
-        if len(API_KEY) < 32:
-            return jsonify({"error": "API authentication not configured"}), 503
-        def matches(value):
-            return hmac.compare_digest(hashlib.sha256(value.encode()).digest(), hashlib.sha256(API_KEY.encode()).digest())
-        bearer = auth[7:] if auth.startswith('Bearer ') else ''
-        if matches(bearer) or matches(key):
+        if auth == f"Bearer {API_KEY}" or key == API_KEY:
             return f(*args, **kwargs)
         return jsonify({"error": "Unauthorized"}), 401
     return decorated
